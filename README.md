@@ -54,6 +54,3 @@ After running the database seed script, the following accounts are available for
 | Analyst | analyst@example.com | Analyst@123 |
 | Viewer | viewer@example.com | Viewer@123 |
 
-## License
-
-MIT
