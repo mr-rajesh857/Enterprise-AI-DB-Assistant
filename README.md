@@ -8,110 +8,116 @@ It converts conversational natural language into secure, optimized SQL queries, 
 
 ## 📊 End-to-End System Architecture Diagram
 
-This single unified flowchart details the complete end-to-end request lifecycle—from authentication and memory lookup to LangGraph agent execution, FastMCP database querying, and background sleep agent template extraction:
-
 ```mermaid
 flowchart TD
     %% ─────────────────────────────────────────────────────────────────────────
+    %% STYLING CLASSES FOR COLORED NODES
+    %% ─────────────────────────────────────────────────────────────────────────
+    classDef feNode fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff
+    classDef apiNode fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#ffffff
+    classDef memNode fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    classDef agentNode fill:#3b0764,stroke:#a855f7,stroke-width:2px,color:#ffffff
+    classDef dbNode fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff
+    classDef sleepNode fill:#701a75,stroke:#e879f9,stroke-width:2px,color:#ffffff
+    classDef hitNode fill:#065f46,stroke:#34d399,stroke-width:3px,color:#ffffff
+    classDef errNode fill:#881337,stroke:#f43f5e,stroke-width:2px,color:#ffffff
+
+    %% ─────────────────────────────────────────────────────────────────────────
     %% 1. FRONTEND LAYER
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph Frontend["💻 1. FRONTEND SECURITY & UI LAYER (Next.js 16)"]
-        UserPrompt["User Submits Natural Language Query\n('List top 5 products by stock value')"]
-        FEAuthGuard{"Frontend Auth Guard\n(isInitialized & localStorage token?)"}
-        RedirectLogin["Redirect to /login"]
-        RenderUI["Render Dark Slate UI & Results Data Table"]
+    subgraph Frontend["💻 Frontend UI & Session"]
+        UserPrompt["User Prompt"]:::feNode
+        FEAuthCheck{"Auth Guard Check"}:::feNode
+        RedirectLogin["Redirect to Login"]:::errNode
+        RenderUI["Render Results UI"]:::feNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% 2. BACKEND API & AUDIT LAYER
+    %% 2. API GATEWAY LAYER
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph APIGateway["🛡️ 2. FASTAPI GATEWAY & SECURITY LAYER"]
-        APIRoute["POST /api/query/chat"]
-        JWTCheck{"Verify JWT Bearer Token"}
-        AuditInit["Create AuditLog Entry\n(user_id, user_email, prompt)"]
-        RBACGate{"Check RBAC Scope\n(get_allowed_tables)"}
-        Block401["HTTP 401 Unauthorized"]
-        Block403["HTTP 403 Forbidden"]
+    subgraph APIGateway["🛡️ API Gateway & Security"]
+        APIRoute["POST /api/query/chat"]:::apiNode
+        AuditInit["Record Audit Log"]:::apiNode
+        RBACGate{"RBAC Security Check"}:::apiNode
+        Block403["Access Denied"]:::errNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% 3. LEVEL 0 CHEAP-FIRST MEMORY LOOKUP ($0 LLM COST)
+    %% 3. LEVEL 0 MEMORY LOOKUP ($0 COST)
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph MemoryLookup["⚡ 3. LEVEL 0 TWO-TIERED MEMORY LOOKUP ($0 LLM COST)"]
-        Level1Hash{"Level 1: SHA-256 Hash Match?"}
-        Level2Semantic{"Level 2: Gemini LLM Semantic Intent Matcher"}
-        TierCheck["Check Priority Scope:\n1. User Scope (user_id = X)\n2. Shared Scope (user_id = NULL)"]
-        MemoryHit["🎯 MEMORY HIT! (0ms / 0 LLM Cost)\nInject runtime slots e.g. {user_id}"]
+    subgraph MemoryLookup["⚡ Memory Engine ($0 Cost)"]
+        ScopeCheck["Lookup Scope"]:::memNode
+        Level1Hash{"Level 1: SHA-256 Hash"}:::memNode
+        Level2Semantic{"Level 2: AI Intent Match"}:::memNode
+        MemoryHit["🎯 Memory HIT ($0 Cost)"]:::hitNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% 4. LANGGRAPH STATEGRAPH AGENT REASONING LOOP (ON MEMORY MISS)
+    %% 4. LANGGRAPH AGENT LOOP
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph LangGraphEngine["🧠 4. LANGGRAPH STATEGRAPH AGENT (ON MEMORY MISS)"]
-        Node1["Node 1: schema_inspector\n(Inject schema context & allowed_tables)"]
-        Node2["Node 2: llm_reasoner\n(Call Gemini 3.5 Flash + FastMCP Declarations)"]
-        Node3["Node 3: mcp_tool_execution\n(Execute FastMCP SELECT Queries)"]
-        Node4["Node 4: response_synthesizer\n(Compile final QueryResponse JSON)"]
+    subgraph LangGraphEngine["🧠 LangGraph Agent Loop"]
+        Node1["Node 1: Schema Inspector"]:::agentNode
+        Node2["Node 2: Gemini Reasoner"]:::agentNode
+        Node3["Node 3: FastMCP Tool Executor"]:::agentNode
+        Node4["Node 4: Response Synthesizer"]:::agentNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% 5. FASTMCP PROTOCOL & DATABASE LAYER
+    %% 5. FASTMCP & DATABASE LAYER
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph DatabaseLayer["🗄️ 5. FASTMCP PROTOCOL & DATABASE LAYER"]
-        SQLVal{"Validate SQL Syntax\n(Enforce SELECT only)"}
-        FastMCPTools["FastMCP Tools\n(execute_query, describe_table, list_tables)"]
-        PostgreSQL[(PostgreSQL Enterprise Database\ncustomers, orders, products, audit_logs)]
+    subgraph DatabaseLayer["🗄️ Database & MCP Protocols"]
+        SQLVal{"SQL Validation"}:::dbNode
+        FastMCPTools["FastMCP Tools"]:::dbNode
+        PostgreSQL[(PostgreSQL Database)]:::dbNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% 6. ASYNCHRONOUS SLEEP AGENT MEMORY BUILDER (BACKGROUND PIPELINE)
+    %% 6. ASYNCHRONOUS SLEEP AGENT
     %% ─────────────────────────────────────────────────────────────────────────
-    subgraph SleepAgent["⚙️ 6. ASYNCHRONOUS SLEEP AGENT MEMORY BUILDER (BACKGROUND)"]
-        BgTrigger["FastAPI BackgroundTasks Enqueue\n(run_memory_builder_cycle)"]
-        Watermark["Watermark Gating\n(Fetch unprocessed chat messages)"]
-        PIIGate["Privacy Enforcement Gate\n(scrub_pii: Redact emails, SSNs, credit cards)"]
-        DedupCheck{"SHA-256 Intent Hash Exists?"}
-        LLMAbstraction["Gemini Value-Agnostic Template Abstraction\n(Abstract slots like {user_id}, ensure COUNT/GROUP BY)"]
-        SaveQueryMemory["Persist New QueryMemory to DB"]
+    subgraph SleepAgent["⚙️ Async Sleep Agent"]
+        BgTrigger["Trigger Sleep Agent"]:::sleepNode
+        Watermark["1. Watermark Check"]:::sleepNode
+        PIIGate["2. Privacy Gate"]:::sleepNode
+        DedupCheck{"3. Pattern Exists?"}:::sleepNode
+        LLMAbstraction["4. AI Template Abstraction"]:::sleepNode
+        SaveQueryMemory["5. Save Reusable Memory"]:::sleepNode
     end
 
     %% ─────────────────────────────────────────────────────────────────────────
-    %% CONNECTORS & EXECUTION FLOW
+    %% CONNECTORS
     %% ─────────────────────────────────────────────────────────────────────────
-    UserPrompt --> FEAuthGuard
-    FEAuthGuard -->|No Token| RedirectLogin
-    FEAuthGuard -->|Token Valid| APIRoute
+    UserPrompt --> FEAuthCheck
+    FEAuthCheck -->|Failed| RedirectLogin
+    FEAuthCheck -->|Passed| APIRoute
     
-    APIRoute --> JWTCheck
-    JWTCheck -->|Invalid Token| Block401
-    JWTCheck -->|Valid Token| AuditInit
+    APIRoute --> AuditInit
     AuditInit --> RBACGate
-    RBACGate -->|Permission Denied| Block403
-    RBACGate -->|Access Granted| TierCheck
+    RBACGate -->|Denied| Block403
+    RBACGate -->|Passed| ScopeCheck
 
-    TierCheck --> Level1Hash
-    Level1Hash -->|Match Found| MemoryHit
+    ScopeCheck --> Level1Hash
+    Level1Hash -->|Match| MemoryHit
     Level1Hash -->|Miss| Level2Semantic
-    Level2Semantic -->|Match Found| MemoryHit
+    Level2Semantic -->|Match| MemoryHit
     Level2Semantic -->|Miss| Node1
 
     MemoryHit --> SQLVal
     Node1 --> Node2
-    Node2 -->|Function Call| Node3
+    Node2 -->|Tool Call| Node3
     Node3 --> SQLVal
 
     SQLVal -->|Valid SELECT| FastMCPTools
-    SQLVal -->|Blocked Statement| Node4
+    SQLVal -->|Invalid| Node4
     FastMCPTools --> PostgreSQL
 
-    FastMCPTools -->|Return Rows| Node4
-    Node4 -->|QueryResponse JSON| RenderUI
-    Node4 -->|Query Completed| BgTrigger
+    FastMCPTools -->|Query Results| Node4
+    Node4 -->|Response JSON| RenderUI
+    Node4 -->|Complete| BgTrigger
 
     BgTrigger --> Watermark
     Watermark --> PIIGate
     PIIGate --> DedupCheck
-    DedupCheck -->|Already Cached| Done[End Pipeline]
+    DedupCheck -->|Saved| Done[Complete]:::sleepNode
     DedupCheck -->|New Pattern| LLMAbstraction
     LLMAbstraction --> SaveQueryMemory
 ```
@@ -121,85 +127,90 @@ flowchart TD
 
 ```text
 flowchart TD
-    subgraph Frontend["💻 1. FRONTEND SECURITY & UI LAYER (Next.js 16)"]
-        UserPrompt["User Submits Natural Language Query\n('List top 5 products by stock value')"]
-        FEAuthGuard{"Frontend Auth Guard\n(isInitialized & localStorage token?)"}
-        RedirectLogin["Redirect to /login"]
-        RenderUI["Render Dark Slate UI & Results Data Table"]
+    classDef feNode fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff
+    classDef apiNode fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#ffffff
+    classDef memNode fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    classDef agentNode fill:#3b0764,stroke:#a855f7,stroke-width:2px,color:#ffffff
+    classDef dbNode fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff
+    classDef sleepNode fill:#701a75,stroke:#e879f9,stroke-width:2px,color:#ffffff
+    classDef hitNode fill:#065f46,stroke:#34d399,stroke-width:3px,color:#ffffff
+    classDef errNode fill:#881337,stroke:#f43f5e,stroke-width:2px,color:#ffffff
+
+    subgraph Frontend["💻 Frontend UI & Session"]
+        UserPrompt["User Prompt"]:::feNode
+        FEAuthCheck{"Auth Guard Check"}:::feNode
+        RedirectLogin["Redirect to Login"]:::errNode
+        RenderUI["Render Results UI"]:::feNode
     end
 
-    subgraph APIGateway["🛡️ 2. FASTAPI GATEWAY & SECURITY LAYER"]
-        APIRoute["POST /api/query/chat"]
-        JWTCheck{"Verify JWT Bearer Token"}
-        AuditInit["Create AuditLog Entry\n(user_id, user_email, prompt)"]
-        RBACGate{"Check RBAC Scope\n(get_allowed_tables)"}
-        Block401["HTTP 401 Unauthorized"]
-        Block403["HTTP 403 Forbidden"]
+    subgraph APIGateway["🛡️ API Gateway & Security"]
+        APIRoute["POST /api/query/chat"]:::apiNode
+        AuditInit["Record Audit Log"]:::apiNode
+        RBACGate{"RBAC Security Check"}:::apiNode
+        Block403["Access Denied"]:::errNode
     end
 
-    subgraph MemoryLookup["⚡ 3. LEVEL 0 TWO-TIERED MEMORY LOOKUP ($0 LLM COST)"]
-        Level1Hash{"Level 1: SHA-256 Hash Match?"}
-        Level2Semantic{"Level 2: Gemini LLM Semantic Intent Matcher"}
-        TierCheck["Check Priority Scope:\n1. User Scope (user_id = X)\n2. Shared Scope (user_id = NULL)"]
-        MemoryHit["🎯 MEMORY HIT! (0ms / 0 LLM Cost)\nInject runtime slots e.g. {user_id}"]
+    subgraph MemoryLookup["⚡ Memory Engine ($0 Cost)"]
+        ScopeCheck["Lookup Scope"]:::memNode
+        Level1Hash{"Level 1: SHA-256 Hash"}:::memNode
+        Level2Semantic{"Level 2: AI Intent Match"}:::memNode
+        MemoryHit["🎯 Memory HIT ($0 Cost)"]:::hitNode
     end
 
-    subgraph LangGraphEngine["🧠 4. LANGGRAPH STATEGRAPH AGENT (ON MEMORY MISS)"]
-        Node1["Node 1: schema_inspector\n(Inject schema context & allowed_tables)"]
-        Node2["Node 2: llm_reasoner\n(Call Gemini 3.5 Flash + FastMCP Declarations)"]
-        Node3["Node 3: mcp_tool_execution\n(Execute FastMCP SELECT Queries)"]
-        Node4["Node 4: response_synthesizer\n(Compile final QueryResponse JSON)"]
+    subgraph LangGraphEngine["🧠 LangGraph Agent Loop"]
+        Node1["Node 1: Schema Inspector"]:::agentNode
+        Node2["Node 2: Gemini Reasoner"]:::agentNode
+        Node3["Node 3: FastMCP Tool Executor"]:::agentNode
+        Node4["Node 4: Response Synthesizer"]:::agentNode
     end
 
-    subgraph DatabaseLayer["🗄️ 5. FASTMCP PROTOCOL & DATABASE LAYER"]
-        SQLVal{"Validate SQL Syntax\n(Enforce SELECT only)"}
-        FastMCPTools["FastMCP Tools\n(execute_query, describe_table, list_tables)"]
-        PostgreSQL[(PostgreSQL Enterprise Database\ncustomers, orders, products, audit_logs)]
+    subgraph DatabaseLayer["🗄️ Database & MCP Protocols"]
+        SQLVal{"SQL Validation"}:::dbNode
+        FastMCPTools["FastMCP Tools"]:::dbNode
+        PostgreSQL[(PostgreSQL Database)]:::dbNode
     end
 
-    subgraph SleepAgent["⚙️ 6. ASYNCHRONOUS SLEEP AGENT MEMORY BUILDER (BACKGROUND)"]
-        BgTrigger["FastAPI BackgroundTasks Enqueue\n(run_memory_builder_cycle)"]
-        Watermark["Watermark Gating\n(Fetch unprocessed chat messages)"]
-        PIIGate["Privacy Enforcement Gate\n(scrub_pii: Redact emails, SSNs, credit cards)"]
-        DedupCheck{"SHA-256 Intent Hash Exists?"}
-        LLMAbstraction["Gemini Value-Agnostic Template Abstraction\n(Abstract slots like {user_id}, ensure COUNT/GROUP BY)"]
-        SaveQueryMemory["Persist New QueryMemory to DB"]
+    subgraph SleepAgent["⚙️ Async Sleep Agent"]
+        BgTrigger["Trigger Sleep Agent"]:::sleepNode
+        Watermark["1. Watermark Check"]:::sleepNode
+        PIIGate["2. Privacy Gate"]:::sleepNode
+        DedupCheck{"3. Pattern Exists?"}:::sleepNode
+        LLMAbstraction["4. AI Template Abstraction"]:::sleepNode
+        SaveQueryMemory["5. Save Reusable Memory"]:::sleepNode
     end
 
-    UserPrompt --> FEAuthGuard
-    FEAuthGuard -->|No Token| RedirectLogin
-    FEAuthGuard -->|Token Valid| APIRoute
+    UserPrompt --> FEAuthCheck
+    FEAuthCheck -->|Failed| RedirectLogin
+    FEAuthCheck -->|Passed| APIRoute
     
-    APIRoute --> JWTCheck
-    JWTCheck -->|Invalid Token| Block401
-    JWTCheck -->|Valid Token| AuditInit
+    APIRoute --> AuditInit
     AuditInit --> RBACGate
-    RBACGate -->|Permission Denied| Block403
-    RBACGate -->|Access Granted| TierCheck
+    RBACGate -->|Denied| Block403
+    RBACGate -->|Passed| ScopeCheck
 
-    TierCheck --> Level1Hash
-    Level1Hash -->|Match Found| MemoryHit
+    ScopeCheck --> Level1Hash
+    Level1Hash -->|Match| MemoryHit
     Level1Hash -->|Miss| Level2Semantic
-    Level2Semantic -->|Match Found| MemoryHit
+    Level2Semantic -->|Match| MemoryHit
     Level2Semantic -->|Miss| Node1
 
     MemoryHit --> SQLVal
     Node1 --> Node2
-    Node2 -->|Function Call| Node3
+    Node2 -->|Tool Call| Node3
     Node3 --> SQLVal
 
     SQLVal -->|Valid SELECT| FastMCPTools
-    SQLVal -->|Blocked Statement| Node4
+    SQLVal -->|Invalid| Node4
     FastMCPTools --> PostgreSQL
 
-    FastMCPTools -->|Return Rows| Node4
-    Node4 -->|QueryResponse JSON| RenderUI
-    Node4 -->|Query Completed| BgTrigger
+    FastMCPTools -->|Query Results| Node4
+    Node4 -->|Response JSON| RenderUI
+    Node4 -->|Complete| BgTrigger
 
     BgTrigger --> Watermark
     Watermark --> PIIGate
     PIIGate --> DedupCheck
-    DedupCheck -->|Already Cached| Done[End Pipeline]
+    DedupCheck -->|Saved| Done[Complete]:::sleepNode
     DedupCheck -->|New Pattern| LLMAbstraction
     LLMAbstraction --> SaveQueryMemory
 ```
