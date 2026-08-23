@@ -17,6 +17,7 @@ class User(Base):
 
     role = relationship("Role", back_populates="users")
     audit_logs = relationship("AuditLog", back_populates="user")
+    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
     def get_allowed_tables_list(self):
         if self.allowed_tables:

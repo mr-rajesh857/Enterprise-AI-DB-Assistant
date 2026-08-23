@@ -30,11 +30,11 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-slate-100">
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:pb-0 pb-24">
+      <div className="flex-1 flex flex-col lg:pb-0 pb-24 min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-950">{children}</main>
       </div>
       <MobileNav />
     </div>

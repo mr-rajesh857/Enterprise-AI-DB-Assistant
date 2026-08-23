@@ -24,18 +24,15 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Query Your Database</h1>
-        <p className="text-gray-600">
-          Ask questions about your data in natural language. The AI will write and execute SQL queries.
-        </p>
-      </div>
-
-      {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
+    <div className="h-[calc(100vh-61px)] w-full p-3 sm:p-4 bg-slate-950 flex flex-col">
+      {error && (
+        <div className="mb-3">
+          <ErrorAlert message={error} onClose={() => setError(null)} />
+        </div>
+      )}
 
       {initialized && (
-        <div className="bg-white rounded-lg shadow h-screen max-h-[calc(100vh-200px)] min-h-96">
+        <div className="flex-1 w-full h-full min-h-0">
           <ChatInterface />
         </div>
       )}

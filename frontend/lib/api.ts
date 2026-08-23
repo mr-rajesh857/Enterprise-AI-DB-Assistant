@@ -12,6 +12,8 @@ import {
   UserCreate,
   UserUpdate,
   TablesList,
+  ChatSession,
+  ChatMessage,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -139,6 +141,27 @@ class APIClient {
   // Stats (admin)
   async getStats(): Promise<Stats> {
     const response = await this.client.get<Stats>('/admin/stats');
+    return response.data;
+  }
+
+  // Chat Sessions & History
+  async getChatSessions(): Promise<ChatSession[]> {
+    const response = await this.client.get<ChatSession[]>('/chats');
+    return response.data;
+  }
+
+  async createChatSession(title?: string): Promise<ChatSession> {
+    const response = await this.client.post<ChatSession>('/chats', { title });
+    return response.data;
+  }
+
+  async getChatMessages(sessionId: number): Promise<ChatMessage[]> {
+    const response = await this.client.get<ChatMessage[]>(`/chats/${sessionId}`);
+    return response.data;
+  }
+
+  async deleteChatSession(sessionId: number): Promise<{ message: string }> {
+    const response = await this.client.delete<{ message: string }>(`/chats/${sessionId}`);
     return response.data;
   }
 }

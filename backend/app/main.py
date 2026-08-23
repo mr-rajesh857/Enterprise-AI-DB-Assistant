@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
-from app.models import User, Role, Permission, AuditLog
-from app.routers import auth, query, users, roles, admin
+from app.models import User, Role, Permission, AuditLog, ChatSession, ChatMessage
+from app.routers import auth, query, users, roles, admin, chats
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -18,6 +18,7 @@ app.add_middleware(CORSMiddleware,
 
 app.include_router(auth.router,  prefix="/api/auth",  tags=["Auth"])
 app.include_router(query.router, prefix="/api/query", tags=["Query"])
+app.include_router(chats.router, prefix="/api",       tags=["Chats"])
 app.include_router(users.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(roles.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
