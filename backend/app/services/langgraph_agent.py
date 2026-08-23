@@ -123,14 +123,20 @@ def memory_lookup_node(state: AgentState) -> Dict[str, Any]:
 
 
 def schema_inspector_node(state: AgentState) -> Dict[str, Any]:
-    """Node 1: Inspect schema permissions and initialize state contents."""
-    print("🔵 [LangGraph Node 1/4: schema_inspector] Initializing graph state and checking RBAC permissions...")
+    """Node 1: Inspect schema permissions and initialize state contents with full schema context."""
+    print("🔵 [LangGraph Node 1/4: schema_inspector] Initializing graph state, checking RBAC permissions, and loading DB schema...")
     contents = []
-    for msg in (state.get("conversation_history") or [])[-8:]:
+    
+    # Load schema summary directly to eliminate unnecessary LLM turns
+    schema_info = get_schema_summary(state.get("allowed_tables"))
+    schema_context = f"Database Schema Context:\n{json.dumps(schema_info, default=str)}\n"
+
+    for msg in (state.get("conversation_history") or [])[-6:]:
         role = "user" if msg.get("role") == "user" else "model"
         contents.append(types.Content(role=role, parts=[types.Part(text=msg.get("content", ""))]))
 
-    contents.append(types.Content(role="user", parts=[types.Part(text=state["user_message"])]))
+    user_prompt_with_schema = f"{schema_context}\nUser Question: {state['user_message']}"
+    contents.append(types.Content(role="user", parts=[types.Part(text=user_prompt_with_schema)]))
     
     return {
         "contents": contents,
@@ -143,29 +149,45 @@ def schema_inspector_node(state: AgentState) -> Dict[str, Any]:
 def llm_reasoner_node(state: AgentState) -> Dict[str, Any]:
     """Node 2: Call LLM with FastMCP tools attached."""
     print(f"🧠 [LangGraph Node 2/4: llm_reasoner] Calling Gemini model (iteration {state['iteration'] + 1}) with FastMCP tool declarations...")
-    response = client.models.generate_content(
-        model=settings.GEMINI_MODEL,
-        contents=state["contents"],
-        config=types.GenerateContentConfig(
-            systemInstruction=SYSTEM_INSTRUCTION,
-            tools=[FAST_MCP_TOOLS],
-            temperature=0.1,
+    try:
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=state["contents"],
+            config=types.GenerateContentConfig(
+                systemInstruction=SYSTEM_INSTRUCTION,
+                tools=[FAST_MCP_TOOLS],
+                temperature=0.1,
+            )
         )
-    )
 
-    candidate = response.candidates[0]
-    new_contents = list(state["contents"])
-    new_contents.append(types.Content(role="model", parts=candidate.content.parts))
+        candidate = response.candidates[0]
+        new_contents = list(state["contents"])
+        new_contents.append(types.Content(role="model", parts=candidate.content.parts))
 
-    tool_calls = [p for p in candidate.content.parts if p.function_call]
-    final_text = "".join(p.text for p in candidate.content.parts if hasattr(p, "text") and p.text)
+        tool_calls = [p for p in candidate.content.parts if p.function_call]
+        final_text = "".join(p.text for p in candidate.content.parts if hasattr(p, "text") and p.text)
 
-    return {
-        "contents": new_contents,
-        "pending_tool_calls": tool_calls,
-        "final_answer": final_text.strip() if final_text else None,
-        "iteration": state["iteration"] + 1
-    }
+        return {
+            "contents": new_contents,
+            "pending_tool_calls": tool_calls,
+            "final_answer": final_text.strip() if final_text else None,
+            "iteration": state["iteration"] + 1,
+            "status": "processing"
+        }
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ [LangGraph LLM Reasoner Error]: {error_msg}")
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            user_err = "Gemini API Quota Reached (429 Rate Limit). Please wait a moment and try again."
+        else:
+            user_err = f"AI Agent Error: {error_msg}"
+
+        return {
+            "pending_tool_calls": [],
+            "final_answer": user_err,
+            "status": "error",
+            "iteration": state["iteration"] + 1
+        }
 
 
 def mcp_tool_execution_node(state: AgentState) -> Dict[str, Any]:
@@ -227,12 +249,18 @@ def mcp_tool_execution_node(state: AgentState) -> Dict[str, Any]:
 def response_synthesizer_node(state: AgentState) -> Dict[str, Any]:
     """Node 4: Synthesize final output and status."""
     print("✅ [LangGraph Node 4/4: response_synthesizer] Synthesizing final response and building response object...")
-    answer = state.get("final_answer") or "Query executed successfully."
-    if state["iteration"] >= 8 and state.get("pending_tool_calls"):
-        answer = "I was unable to complete the request within the allowed execution steps."
+    if state.get("status") == "error":
+        answer = state.get("final_answer") or "An error occurred during query execution."
         status = "error"
-    else:
+    elif state.get("last_sql"):
+        answer = state.get("final_answer") or "Query executed successfully."
         status = "success"
+    elif state.get("final_answer"):
+        answer = state.get("final_answer")
+        status = "success"
+    else:
+        answer = "No SQL query could be generated for this request. Please verify your query."
+        status = "error"
 
     return {
         "final_answer": answer,
@@ -251,6 +279,8 @@ def route_next(state: AgentState) -> str:
         return "response_synthesizer"
     if state.get("pending_tool_calls") and state.get("iteration", 0) < 8:
         return "mcp_tool_execution"
+    if not state.get("last_sql") and state.get("iteration", 0) < 6 and state.get("status") != "error":
+        return "llm_reasoner"
     return "response_synthesizer"
 
 
@@ -290,6 +320,7 @@ builder.add_conditional_edges(
     route_next,
     {
         "mcp_tool_execution": "mcp_tool_execution",
+        "llm_reasoner": "llm_reasoner",
         "response_synthesizer": "response_synthesizer"
     }
 )

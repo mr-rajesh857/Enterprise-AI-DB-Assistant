@@ -3,8 +3,8 @@ from typing import Optional, List
 from sqlalchemy import text, inspect as sa_inspect
 from app.database import engine
 
-# Tables hidden from AI (internal system tables)
-SYSTEM_TABLES = {"users", "roles", "permissions", "role_permissions", "audit_logs"}
+# Internal system tables hidden from generic schema discovery
+SYSTEM_TABLES = {"roles", "permissions", "role_permissions", "chat_sessions", "chat_messages", "query_memories"}
 
 def list_tables(allowed_tables: Optional[List[str]] = None) -> dict:
     """

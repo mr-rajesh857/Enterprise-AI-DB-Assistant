@@ -63,7 +63,7 @@ def evaluate_semantic_intent(user_message: str, candidates: List[QueryMemory]) -
     Semantic Intent Matcher Engine:
     Uses LLM decision engine to judge whether an incoming question ('who is the user')
     requests the same underlying database information as any stored candidate pattern ('what the user name').
-    Ignores differences in phrasing, word order, filler words, or synonyms.
+    Ignores differences in phrasing, word order, filler words, or synonyms with ZERO hardcoded rules.
     """
     if not candidates or not user_message:
         return None
@@ -106,7 +106,7 @@ Respond with JSON ONLY in this format:
                 if mem.id == matched_id:
                     return mem
     except Exception as e:
-        print(f"⚠️ [Semantic Intent Engine] Error during evaluation: {e}")
+        print(f"ℹ️ [Semantic Intent Engine] LLM evaluation skipped: {e}")
 
     return None
 
