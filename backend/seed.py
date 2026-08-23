@@ -292,8 +292,16 @@ def seed():
                     print("  ✅ Updated viewer role with chat permission")
 
         # Business tables
-        with engine.connect() as conn:
-            conn.execute(text(CREATE_TABLES_SQL)); conn.commit()
+        with engine.begin() as conn:
+            statements = CREATE_TABLES_SQL.split(";")
+            for stmt in statements:
+                stmt = stmt.strip()
+                if not stmt:
+                    continue
+                if engine.url.drivername.startswith("sqlite"):
+                    stmt = stmt.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+                    stmt = stmt.replace("TIMESTAMP DEFAULT NOW()", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                conn.execute(text(stmt))
         print("📦 Business tables ready")
 
         # Check if already seeded
