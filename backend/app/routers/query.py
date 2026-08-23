@@ -21,7 +21,8 @@ async def chat(body: QueryRequest, request: Request,
                db: Session = Depends(get_db),
                current_user: User = Depends(get_current_user)):
     allowed_tables = get_allowed_tables(current_user)
-    log = AuditLog(user_id=current_user.id, action="query_request",
+    log = AuditLog(user_id=current_user.id, user_email=current_user.email,
+                   action="query_request",
                    natural_language=body.message,
                    ip_address=request.client.host if request.client else "unknown",
                    status="processing")

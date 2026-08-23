@@ -7,6 +7,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_email = Column(String(255), nullable=True)
     action = Column(String(100), nullable=False)
     natural_language = Column(Text, nullable=True)
     sql_query = Column(Text, nullable=True)
