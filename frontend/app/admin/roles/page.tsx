@@ -6,7 +6,7 @@ import { Role } from '@/types';
 import { RoleList, RoleForm } from '@/components/RoleManagement';
 import { ErrorAlert, SuccessAlert } from '@/components/Alert';
 import { LoadingSpinner } from '@/components/Loading';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Shield } from 'lucide-react';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -48,14 +48,23 @@ export default function RolesPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-white">Roles Management</h1>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-lg shadow-purple-500/20 text-white">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Roles & Permissions</h1>
+            <p className="text-xs text-slate-400 font-mono">Define user access levels and feature permission policies.</p>
+          </div>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-lg shadow-blue-600/20 text-xs font-semibold transition"
         >
-          {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           {showForm ? 'Cancel' : 'Create Role'}
         </button>
       </div>
@@ -63,27 +72,23 @@ export default function RolesPage() {
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {success && <SuccessAlert message={success} onClose={() => setSuccess(null)} />}
 
-      {/* Form */}
+      {/* Form Panel */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Create New Role</h2>
-          <RoleForm
-            loading={formLoading}
-            onSubmit={handleCreate}
-            onCancel={() => setShowForm(false)}
-          />
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+          <h2 className="text-base font-semibold text-white">Create New Security Role</h2>
+          <RoleForm loading={formLoading} onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
         </div>
       )}
 
       {/* Role List */}
       <div>
         {loading ? (
-          <div className="flex justify-center p-8">
+          <div className="flex justify-center p-12">
             <LoadingSpinner />
           </div>
         ) : roles.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-            <p>No roles found.</p>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500">
+            <p>No security roles defined.</p>
           </div>
         ) : (
           <RoleList roles={roles} loading={loading} />

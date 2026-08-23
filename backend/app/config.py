@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = _get_env("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(_get_env("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
     GEMINI_API_KEY: str = _get_env("GEMINI_API_KEY", "dummy-gemini-key")
-    GEMINI_MODEL: str = _get_env("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = _get_env("GEMINI_MODEL", "gemini-3.5-flash")
     APP_ENV: str = _get_env("APP_ENV", "development")
     CORS_ORIGINS: str = _get_env("CORS_ORIGINS", "http://localhost:3000")
 

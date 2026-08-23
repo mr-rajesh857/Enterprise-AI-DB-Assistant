@@ -293,7 +293,15 @@ def seed():
 
         # Business tables
         with engine.begin() as conn:
-            conn.execute(text(CREATE_TABLES_SQL))
+            statements = CREATE_TABLES_SQL.split(";")
+            for stmt in statements:
+                stmt = stmt.strip()
+                if not stmt:
+                    continue
+                if engine.url.drivername.startswith("sqlite"):
+                    stmt = stmt.replace("SERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+                    stmt = stmt.replace("TIMESTAMP DEFAULT NOW()", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                conn.execute(text(stmt))
         print("📦 Business tables ready")
 
         # Check if already seeded
@@ -318,8 +326,9 @@ def seed():
         }
         category_ids = {}
         for cname, cdesc in cat_desc.items():
-            with engine.begin() as conn:
+            with engine.connect() as conn:
                 r = conn.execute(text("INSERT INTO categories (name,description) VALUES (:n,:d) RETURNING id"),{"n":cname,"d":cdesc})
+                conn.commit()
                 category_ids[cname] = r.fetchone()[0]
         print(f"  ✅ {len(category_ids)} categories")
 
@@ -332,12 +341,13 @@ def seed():
             product_ids[cname] = []
             for pname, price, cost in items:
                 sku += 1
-                with engine.begin() as conn:
+                with engine.connect() as conn:
                     r = conn.execute(text("""
                         INSERT INTO products (category_id,name,description,price,cost_price,stock_qty,sku)
                         VALUES (:cid,:n,:d,:p,:cp,:sq,:sk) RETURNING id
                     """),{"cid":cid,"n":pname,"d":f"Quality {pname.lower()} trusted by customers.",
                           "p":price,"cp":cost,"sq":random.randint(5,500),"sk":f"SKU-{sku}"})
+                    conn.commit()
                     product_ids[cname].append(r.fetchone()[0])
         total_products = sum(len(v) for v in product_ids.values())
         print(f"  ✅ {total_products} products")
@@ -350,12 +360,13 @@ def seed():
             last  = random.choice(LAST_NAMES)
             city  = random.choice(CITIES)
             state = STATES.get(city, "India")
-            with engine.begin() as conn:
+            with engine.connect() as conn:
                 r = conn.execute(text("""
                     INSERT INTO customers (full_name,email,phone,city,state,pincode)
                     VALUES (:fn,:em,:ph,:ci,:st,:pi) RETURNING id
                 """),{"fn":f"{first} {last}","em":remail(first,last,i),"ph":rphone(),
                       "ci":city,"st":state,"pi":str(random.randint(110001,799999))})
+                conn.commit()
                 customer_ids.append(r.fetchone()[0])
         print(f"  ✅ {len(customer_ids)} customers")
 
@@ -390,7 +401,7 @@ def seed():
             discount     = round(subtotal * random.choice([0,0,0,0.05,0.10]),2)
             total_amount = round(subtotal - discount + shipping, 2)
 
-            with engine.begin() as conn:
+            with engine.connect() as conn:
                 r = conn.execute(text("""
                     INSERT INTO orders
                       (customer_id,order_date,status,payment_method,
@@ -399,15 +410,17 @@ def seed():
                 """),{"cid":cust_id,"od":order_date,"st":status,"pm":payment,
                       "sub":round(subtotal,2),"disc":discount,"ship":shipping,
                       "total":total_amount,"dd":delivery_date})
+                conn.commit()
                 order_id = r.fetchone()[0]
 
             for pid,qty,price,disc,total in items_data:
-                with engine.begin() as conn:
+                with engine.connect() as conn:
                     conn.execute(text("""
                         INSERT INTO order_items
                           (order_id,product_id,quantity,unit_price,discount,total_price)
                         VALUES (:oid,:pid,:qty,:up,:disc,:tp)
                     """),{"oid":order_id,"pid":pid,"qty":qty,"up":price,"disc":disc,"tp":total})
+                    conn.commit()
                     item_count += 1
             order_count += 1
         print(f"  ✅ {order_count} orders, {item_count} order items")
@@ -419,13 +432,14 @@ def seed():
             cat = random.choice(list(product_ids.keys()))
             pid = random.choice(product_ids[cat])
             cid = random.choice(customer_ids)
-            with engine.begin() as conn:
+            with engine.connect() as conn:
                 conn.execute(text("""
                     INSERT INTO reviews (product_id,customer_id,rating,title,body)
                     VALUES (:pid,:cid,:r,:t,:b)
                 """),{"pid":pid,"cid":cid,
                       "r":random.choices([1,2,3,4,5],weights=[3,5,10,30,52])[0],
                       "t":random.choice(REVIEW_TITLES),"b":random.choice(REVIEW_BODIES)})
+                conn.commit()
                 rev_count += 1
         print(f"  ✅ {rev_count} reviews")
 
@@ -439,16 +453,17 @@ def seed():
             desig = random.choice(DESIGNATIONS[dept])
             city  = random.choice(CITIES)
             hire_date = (datetime.utcnow() - timedelta(days=random.randint(30,1825))).date()
-            with engine.begin() as conn:
+            with engine.connect() as conn:
                 conn.execute(text("""
                     INSERT INTO employees
-                        (full_name,email,phone,department,designation,salary,hire_date,city)
+                      (full_name,email,phone,department,designation,salary,hire_date,city)
                     VALUES (:fn,:em,:ph,:dept,:desig,:sal,:hd,:city)
                 """),{"fn":f"{first} {last}","em":f"{first.lower()}.{last.lower()}{i}@company.com",
                       "ph":rphone(),"dept":dept,"desig":desig,
                       "sal":random.randint(25000,250000),"hd":hire_date,"city":city})
+                conn.commit()
                 emp_count += 1
-                print(f"  ✅ {emp_count} employees")
+        print(f"  ✅ {emp_count} employees")
 
         # Inventory logs
         print("📊 Seeding inventory logs...")
@@ -458,11 +473,12 @@ def seed():
             for _ in range(random.randint(2,8)):
                 reason = random.choice(reasons)
                 change = -random.randint(1,10) if reason=="sale" else random.randint(5,100)
-                with engine.begin() as conn:
+                with engine.connect() as conn:
                     conn.execute(text("""
                         INSERT INTO inventory_logs (product_id,change_qty,reason,logged_at)
                         VALUES (:pid,:cq,:r,:la)
                     """),{"pid":pid,"cq":change,"r":reason,"la":rdate(90)})
+                    conn.commit()
                     inv_count += 1
         print(f"  ✅ {inv_count} inventory log entries")
 

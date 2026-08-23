@@ -33,7 +33,7 @@ For comprehensive instructions on how to set up the project, run the backend, se
 2. Start the Backend API (in `/backend`):
    ```bash
    python -m venv venv
-   .\venv\Scripts\Activate.ps1
+   source venv/bin/activate
    pip install -r requirements.txt
    python seed.py # Seed database with test users and data
    python run.py
@@ -54,3 +54,6 @@ After running the database seed script, the following accounts are available for
 | Analyst | analyst@example.com | Analyst@123 |
 | Viewer | viewer@example.com | Viewer@123 |
 
+## License
+
+MIT

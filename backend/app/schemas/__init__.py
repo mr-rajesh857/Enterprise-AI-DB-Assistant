@@ -56,12 +56,40 @@ class UserUpdate(BaseModel):
 
 class QueryRequest(BaseModel):
     message: str
+    session_id: Optional[int] = None
     conversation_history: Optional[List[dict]] = []
 
 class QueryResponse(BaseModel):
     answer: str
+    session_id: Optional[int] = None
     sql: Optional[str] = None
     columns: Optional[List[str]] = None
     rows: Optional[List[dict]] = None
     row_count: Optional[int] = None
     status: str = "success"
+
+class ChatMessageOut(BaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    sql: Optional[str] = None
+    columns: Optional[List[str]] = None
+    rows: Optional[List[dict]] = None
+    row_count: Optional[int] = None
+    status: str = "success"
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class ChatSessionOut(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages_count: Optional[int] = 0
+    class Config:
+        from_attributes = True
+
+class ChatSessionCreate(BaseModel):
+    title: Optional[str] = "New Conversation"

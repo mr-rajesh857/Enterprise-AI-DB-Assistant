@@ -54,16 +54,39 @@ export interface UserUpdate {
 
 export interface QueryRequest {
   message: string;
+  session_id?: number;
   conversation_history?: Array<{ role: string; content: string }>;
 }
 
 export interface QueryResponse {
   answer: string;
+  session_id?: number;
   sql?: string;
   columns?: string[];
   rows?: Record<string, unknown>[];
   row_count?: number;
   status: string;
+}
+
+export interface ChatSession {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages_count?: number;
+}
+
+export interface ChatMessage {
+  id: number;
+  session_id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  sql?: string;
+  columns?: string[];
+  rows?: Record<string, unknown>[];
+  row_count?: number;
+  status: string;
+  created_at: string;
 }
 
 export interface AuditLog {

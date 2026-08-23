@@ -7,21 +7,21 @@ import { FullPageLoader } from '@/components/Loading';
 
 export default function Home() {
   const router = useRouter();
-  const { user, isLoading, initializeAuth } = useAuthStore();
+  const { user, isInitialized, initializeAuth } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (isInitialized) {
       if (user) {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       } else {
-        router.push('/login');
+        router.replace('/login');
       }
     }
-  }, [user, isLoading, router]);
+  }, [user, isInitialized, router]);
 
   return <FullPageLoader />;
 }

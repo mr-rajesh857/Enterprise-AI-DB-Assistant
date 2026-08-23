@@ -1,52 +1,50 @@
-# Root repo ignores for frontend and backend
-
-# backend Python environments
-/.venv/
-/backend/.venv/
-/backend/venv/
-
-# backend Python caches and test artifacts
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
 *.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
+coverage.xml
 htmlcov/
 
-# backend local config and data
-/backend/.env
-/backend/.env.*
-/backend/app.db
-/backend/*.db
-/backend/*.db-journal
-/backend/*.sqlite
-/backend/*.sqlite3
+# Virtual environments and local settings
+.env
+.env.*
+!.env.example
 
-# frontend dependencies and build output
-/frontend/node_modules/
-/frontend/.pnp
-/frontend/.pnp.*
-/frontend/.yarn/
-/frontend/.next/
-/frontend/out/
-/frontend/build/
-/frontend/coverage/
-/frontend/.vercel/
+# Logs and runtime files
+*.log
+*.pid
+*.seed
 
-# frontend env and generated types
-/frontend/.env
-/frontend/.env.*
-/frontend/next-env.d.ts
+# Next.js / Node
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
 
-# shared OS/editor/debug files
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+
+# Editor and OS files
 .DS_Store
-*.pem
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+Thumbs.db
+.vscode/
+.idea/
 
-# shared TypeScript build metadata
-*.tsbuildinfo
+# Misc
+*.sqlite3
+*.db
