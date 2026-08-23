@@ -6,6 +6,7 @@ interface AuthStore {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -15,7 +16,8 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   token: null,
-  isLoading: false,
+  isLoading: true,
+  isInitialized: false,
   error: null,
 
   login: async (email: string, password: string) => {
@@ -27,27 +29,33 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: response.user,
         token: response.access_token,
         isLoading: false,
+        isInitialized: true,
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       set({
         error: errorMessage,
         isLoading: false,
+        isInitialized: true,
       });
       throw error;
     }
   },
 
-  logout: () => {
-    apiClient.clearToken();
+  logout: async () => {
+    await apiClient.logout();
     set({
       user: null,
       token: null,
       error: null,
+      isLoading: false,
+      isInitialized: true,
     });
   },
 
   initializeAuth: async () => {
+    if (get().isInitialized && !get().isLoading) return;
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
     if (token) {
       try {
@@ -58,17 +66,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           user,
           token,
           isLoading: false,
+          isInitialized: true,
         });
       } catch (error: unknown) {
+        apiClient.clearToken();
         set({
           user: null,
           token: null,
           isLoading: false,
+          isInitialized: true,
         });
-        apiClient.clearToken();
       }
     } else {
-      set({ isLoading: false });
+      set({
+        user: null,
+        token: null,
+        isLoading: false,
+        isInitialized: true,
+      });
     }
   },
 }));

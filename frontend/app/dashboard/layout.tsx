@@ -13,19 +13,19 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, isLoading, initializeAuth } = useAuthStore();
+  const { user, isLoading, isInitialized, initializeAuth } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
+    if (isInitialized && !user) {
+      router.replace('/login');
     }
-  }, [user, isLoading, router]);
+  }, [user, isInitialized, router]);
 
-  if (isLoading || !user) {
+  if (!isInitialized || isLoading || !user) {
     return <FullPageLoader />;
   }
 

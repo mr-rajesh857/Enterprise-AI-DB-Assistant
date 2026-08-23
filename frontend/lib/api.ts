@@ -83,6 +83,16 @@ class APIClient {
     return response.data;
   }
 
+  async logout(): Promise<void> {
+    try {
+      await this.client.post('/auth/logout');
+    } catch {
+      // Ignore network errors on logout
+    } finally {
+      this.clearToken();
+    }
+  }
+
   // Query endpoints
   async chat(request: QueryRequest): Promise<QueryResponse> {
     const response = await this.client.post<QueryResponse>('/query/chat', request);
