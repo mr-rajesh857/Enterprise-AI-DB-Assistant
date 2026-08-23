@@ -66,7 +66,7 @@ async def chat(body: QueryRequest, request: Request,
     db.commit()
 
     # Run LangGraph AI Agent
-    agent = AIAgent(allowed_tables=allowed_tables)
+    agent = AIAgent(allowed_tables=allowed_tables, user_id=current_user.id)
     result = agent.run(body.message, conversation_history)
 
     # Save assistant response message to DB

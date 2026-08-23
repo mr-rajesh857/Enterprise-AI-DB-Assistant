@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
-from app.models import User, Role, Permission, AuditLog, ChatSession, ChatMessage
-from app.routers import auth, query, users, roles, admin, chats
+from app.models import User, Role, Permission, AuditLog, ChatSession, ChatMessage, QueryMemory
+from app.routers import auth, query, users, roles, admin, chats, admin_memory
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,12 +16,13 @@ app.add_middleware(CORSMiddleware,
     allow_origins=settings.cors_list,
     allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-app.include_router(auth.router,  prefix="/api/auth",  tags=["Auth"])
-app.include_router(query.router, prefix="/api/query", tags=["Query"])
-app.include_router(chats.router, prefix="/api",       tags=["Chats"])
-app.include_router(users.router, prefix="/api/admin", tags=["Admin"])
-app.include_router(roles.router, prefix="/api/admin", tags=["Admin"])
-app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(auth.router,         prefix="/api/auth",  tags=["Auth"])
+app.include_router(query.router,        prefix="/api/query", tags=["Query"])
+app.include_router(chats.router,        prefix="/api",       tags=["Chats"])
+app.include_router(admin_memory.router, prefix="/api",       tags=["Memory"])
+app.include_router(users.router,        prefix="/api/admin", tags=["Admin"])
+app.include_router(roles.router,        prefix="/api/admin", tags=["Admin"])
+app.include_router(admin.router,        prefix="/api/admin", tags=["Admin"])
 
 @app.get("/api")
 def root(): return {"status": "ok", "message": "AI DB Assistant API v1.0"}

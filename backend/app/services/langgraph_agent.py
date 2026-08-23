@@ -67,21 +67,60 @@ Rules:
 - Be helpful, accurate, and concise.
 """
 
+from app.database import SessionLocal
+from app.services.memory_service import lookup_memory
+
 # ── LangGraph State Definition ─────────────────────────────────────────────
 class AgentState(TypedDict):
     user_message: str
+    user_id: Optional[int]
     conversation_history: List[Dict[str, Any]]
     allowed_tables: Optional[List[str]]
     contents: List[Any]
     pending_tool_calls: List[Any]
     last_sql: Optional[str]
     last_data: Dict[str, Any]
+    memory_hit: bool
     final_answer: Optional[str]
     status: str
     iteration: int
 
 
 # ── Node Functions ─────────────────────────────────────────────────────────
+
+def memory_lookup_node(state: AgentState) -> Dict[str, Any]:
+    """
+    Node 0: Sub-second Cheap-First Memory Lookup.
+    Checks User-Specific Tier first, Shared Agent Tier second.
+    On hit, bypasses LLM reasoning loop to save API cost.
+    """
+    print("🔍 [LangGraph Node 0: memory_lookup] Cheap-First Two-Tiered Memory Lookup...")
+    db = SessionLocal()
+    try:
+        mem = lookup_memory(db, state["user_message"], user_id=state.get("user_id"))
+        if mem and mem.sql_template:
+            print(f"⚡ [LangGraph Node 0: memory_lookup] MEMORY HIT! Reusing template (0 LLM cost): '{mem.sql_template}'")
+            # Create synthetic pending tool call for execute_query
+            synthetic_fc = types.Part(
+                functionCall=types.FunctionCall(
+                    name="execute_query",
+                    args={"sql": mem.sql_template}
+                )
+            )
+            return {
+                "memory_hit": True,
+                "pending_tool_calls": [synthetic_fc],
+                "last_sql": mem.sql_template,
+                "iteration": 1
+            }
+    except Exception as e:
+        print(f"⚠️ [Memory Lookup] Error during lookup (falling back to standard LLM): {e}")
+    finally:
+        db.close()
+
+    print("ℹ️ [LangGraph Node 0: memory_lookup] No matching memory found. Proceeding to LLM reasoning.")
+    return {"memory_hit": False}
+
 
 def schema_inspector_node(state: AgentState) -> Dict[str, Any]:
     """Node 1: Inspect schema permissions and initialize state contents."""
@@ -97,7 +136,7 @@ def schema_inspector_node(state: AgentState) -> Dict[str, Any]:
         "contents": contents,
         "last_data": {"columns": None, "rows": None, "row_count": None},
         "status": "processing",
-        "iteration": 0
+        "iteration": state.get("iteration", 0)
     }
 
 
@@ -145,7 +184,6 @@ def mcp_tool_execution_node(state: AgentState) -> Dict[str, Any]:
 
         print(f"⚡ [FastMCP Tool Execution] Executing tool: '{name}' with args: {args}")
 
-        # Dispatch call to FastMCP tool handlers
         if name == "list_tables":
             output_dict = list_tables(allowed_tables=allowed_tables)
         elif name == "describe_table":
@@ -175,7 +213,7 @@ def mcp_tool_execution_node(state: AgentState) -> Dict[str, Any]:
             )
         ))
 
-    new_contents = list(state["contents"])
+    new_contents = list(state.get("contents", []))
     new_contents.append(types.Content(role="user", parts=tool_results))
 
     return {
@@ -202,8 +240,15 @@ def response_synthesizer_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-# ── Conditional Router ───────────────────────────────────────────────────────
+# ── Conditional Routers ──────────────────────────────────────────────────────
+def route_start(state: AgentState) -> str:
+    if state.get("memory_hit"):
+        return "mcp_tool_execution"
+    return "schema_inspector"
+
 def route_next(state: AgentState) -> str:
+    if state.get("memory_hit") and not state.get("pending_tool_calls"):
+        return "response_synthesizer"
     if state.get("pending_tool_calls") and state.get("iteration", 0) < 8:
         return "mcp_tool_execution"
     return "response_synthesizer"
@@ -212,12 +257,23 @@ def route_next(state: AgentState) -> str:
 # ── Build LangGraph Workflow ─────────────────────────────────────────────────
 builder = StateGraph(AgentState)
 
+builder.add_node("memory_lookup", memory_lookup_node)
 builder.add_node("schema_inspector", schema_inspector_node)
 builder.add_node("llm_reasoner", llm_reasoner_node)
 builder.add_node("mcp_tool_execution", mcp_tool_execution_node)
 builder.add_node("response_synthesizer", response_synthesizer_node)
 
-builder.add_edge(START, "schema_inspector")
+builder.add_edge(START, "memory_lookup")
+
+builder.add_conditional_edges(
+    "memory_lookup",
+    route_start,
+    {
+        "mcp_tool_execution": "mcp_tool_execution",
+        "schema_inspector": "schema_inspector"
+    }
+)
+
 builder.add_edge("schema_inspector", "llm_reasoner")
 
 builder.add_conditional_edges(
@@ -229,7 +285,15 @@ builder.add_conditional_edges(
     }
 )
 
-builder.add_edge("mcp_tool_execution", "llm_reasoner")
+builder.add_conditional_edges(
+    "mcp_tool_execution",
+    route_next,
+    {
+        "mcp_tool_execution": "mcp_tool_execution",
+        "response_synthesizer": "response_synthesizer"
+    }
+)
+
 builder.add_edge("response_synthesizer", END)
 
 langgraph_app = builder.compile()
@@ -237,18 +301,21 @@ langgraph_app = builder.compile()
 
 # ── LangGraph AIAgent Class ─────────────────────────────────────────────────
 class LangGraphAIAgent:
-    def __init__(self, allowed_tables: Optional[List[str]] = None):
+    def __init__(self, allowed_tables: Optional[List[str]] = None, user_id: Optional[int] = None):
         self.allowed_tables = allowed_tables
+        self.user_id = user_id
 
     def run(self, user_message: str, conversation_history: List[dict] = None) -> dict:
         initial_state: AgentState = {
             "user_message": user_message,
+            "user_id": self.user_id,
             "conversation_history": conversation_history or [],
             "allowed_tables": self.allowed_tables,
             "contents": [],
             "pending_tool_calls": [],
             "last_sql": None,
             "last_data": {"columns": None, "rows": None, "row_count": None},
+            "memory_hit": False,
             "final_answer": None,
             "status": "processing",
             "iteration": 0
