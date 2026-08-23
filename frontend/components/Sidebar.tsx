@@ -56,8 +56,11 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
 
+  const userRoleName = typeof user?.role === 'string' ? user?.role : user?.role?.name;
+  const isAdmin = userRoleName?.toLowerCase() === 'admin';
+
   const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || user?.role === 'admin'
+    (item) => !item.adminOnly || isAdmin
   );
 
   return (
@@ -90,8 +93,11 @@ export function MobileNav() {
   const pathname = usePathname();
   const { user } = useAuthStore();
 
+  const userRoleName = typeof user?.role === 'string' ? user?.role : user?.role?.name;
+  const isAdmin = userRoleName?.toLowerCase() === 'admin';
+
   const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || user?.role === 'admin'
+    (item) => !item.adminOnly || isAdmin
   );
 
   return (

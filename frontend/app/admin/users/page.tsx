@@ -6,7 +6,7 @@ import { User, UserCreate, UserUpdate, Role } from '@/types';
 import { UserList, UserForm } from '@/components/UserManagement';
 import { ErrorAlert, SuccessAlert } from '@/components/Alert';
 import { LoadingSpinner } from '@/components/Loading';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Users as UsersIcon } from 'lucide-react';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -101,29 +101,38 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-white">Users Management</h1>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/20 text-white">
+            <UsersIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Users & RBAC Management</h1>
+            <p className="text-xs text-slate-400 font-mono">Manage accounts, role assignments, and database table permissions.</p>
+          </div>
+        </div>
         <button
           onClick={() => {
             setEditingUser(null);
             setShowForm(!showForm);
           }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-lg shadow-blue-600/20 text-xs font-semibold transition"
         >
-          {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-          {showForm ? 'Cancel' : 'Add User'}
+          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? 'Cancel' : 'Add New User'}
         </button>
       </div>
 
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {success && <SuccessAlert message={success} onClose={() => setSuccess(null)} />}
 
-      {/* Form */}
+      {/* Form Drawer / Panel */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingUser ? 'Edit User' : 'Create New User'}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+          <h2 className="text-base font-semibold text-white">
+            {editingUser ? `Edit User: ${editingUser.full_name}` : 'Create New User Account'}
           </h2>
           <UserForm
             user={editingUser || undefined}
@@ -139,15 +148,15 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* User List */}
-      <div className="bg-white rounded-lg shadow">
+      {/* User List Table */}
+      <div>
         {loading ? (
-          <div className="p-8 flex justify-center">
+          <div className="p-12 flex justify-center">
             <LoadingSpinner />
           </div>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p>No users found. Create one to get started.</p>
+          <div className="p-12 text-center text-slate-500 bg-slate-900 rounded-2xl border border-slate-800">
+            <p>No user accounts found. Click "Add New User" to create one.</p>
           </div>
         ) : (
           <UserList

@@ -1,38 +1,67 @@
 'use client';
 
 import { Role } from '@/types';
-import { getRoleColor } from '@/lib/utils';
+import { ShieldCheck, KeyRound } from 'lucide-react';
 
 interface RoleListProps {
   roles: Role[];
   loading?: boolean;
 }
 
-export function RoleList({ roles, loading }: RoleListProps) {
+export function RoleList({ roles }: RoleListProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {roles.map((role) => (
-        <div key={role.id} className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className={`text-lg font-semibold mb-2 px-3 py-1 rounded-full inline-block ${getRoleColor(role.name)}`}>
-            {role.name}
-          </h3>
-          {role.description && (
-            <p className="text-gray-600 text-sm mb-4">{role.description}</p>
-          )}
-          {role.permissions.length > 0 && (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {roles.map((role) => {
+        const isAdmin = role.name.toLowerCase() === 'admin';
+
+        return (
+          <div
+            key={role.id}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-slate-700 transition flex flex-col justify-between"
+          >
             <div>
-              <p className="text-xs font-semibold text-gray-700 mb-2 uppercase">Permissions</p>
-              <div className="space-y-1">
-                {role.permissions.map((perm) => (
-                  <div key={perm.id} className="text-xs text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                    {perm.name}
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                    isAdmin
+                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                      : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  {role.name}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800">
+                  ID: #{role.id}
+                </span>
               </div>
+
+              {role.description && (
+                <p className="text-xs text-slate-400 mb-4 leading-relaxed">{role.description}</p>
+              )}
+
+              {role.permissions && role.permissions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                    <KeyRound className="w-3 h-3 text-blue-400" />
+                    Assigned Permissions ({role.permissions.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {role.permissions.map((perm) => (
+                      <span
+                        key={perm.id}
+                        className="text-[11px] font-mono text-slate-300 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg"
+                      >
+                        {perm.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -54,40 +83,42 @@ export function RoleForm({ loading, onSubmit, onCancel }: RoleFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 text-slate-100">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
+        <label className="block text-xs font-semibold text-slate-300 mb-1.5">Role Name</label>
         <input
           type="text"
           name="name"
           required
-          className="w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-blue-500 transition"
           disabled={loading}
+          placeholder="e.g. Data Analyst"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-xs font-semibold text-slate-300 mb-1.5">Description</label>
         <input
           type="text"
           name="description"
-          className="w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-blue-500 transition"
           disabled={loading}
+          placeholder="Role responsibilities and scope..."
         />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 pt-2">
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition font-medium"
+          className="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition"
         >
           {loading ? 'Creating...' : 'Create Role'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition font-medium"
+          className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition"
         >
           Cancel
         </button>

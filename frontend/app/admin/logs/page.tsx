@@ -6,6 +6,7 @@ import { AuditLog } from '@/types';
 import { AuditLogTable } from '@/components/AuditLogs';
 import { ErrorAlert } from '@/components/Alert';
 import { LoadingSpinner } from '@/components/Loading';
+import { Activity } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -35,34 +36,40 @@ export default function AuditLogsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white">Audit Logs</h1>
-        <p className="text-gray-600 mt-1">Track all database queries and actions</p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 shadow-lg shadow-indigo-500/20 text-white">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">System Audit & Query Logs</h1>
+            <p className="text-xs text-slate-400 font-mono">Real-time compliance monitoring, query execution tracking, and access logs.</p>
+          </div>
+        </div>
       </div>
 
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-      <div className="bg-white rounded-lg shadow">
+      <div>
         {loading ? (
-          <div className="p-8 flex justify-center">
+          <div className="p-12 flex justify-center">
             <LoadingSpinner />
           </div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p>No audit logs found.</p>
+          <div className="p-12 text-center text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">
+            <p>No audit log entries found.</p>
           </div>
         ) : (
-          <div className="p-6">
-            <AuditLogTable
-              logs={logs}
-              total={total}
-              page={page}
-              pageSize={PAGE_SIZE}
-              onPageChange={setPage}
-              loading={loading}
-            />
-          </div>
+          <AuditLogTable
+            logs={logs}
+            total={total}
+            page={page}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+            loading={loading}
+          />
         )}
       </div>
     </div>
