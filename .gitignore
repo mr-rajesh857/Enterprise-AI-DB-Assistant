@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments and local settings
+.env
+.env.*
+!.env.example
+
+# Logs and runtime files
+*.log
+*.pid
+*.seed
+
+# Next.js / Node
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Misc
+*.sqlite3
+*.db
